@@ -1,10 +1,10 @@
-name: ${CHANANCHIDA_PROJECT} # (0) กำหนดชื่อโปรเจคให้สอดคล้องกับ .env [4]
+name: ${PROJECT_NAME} # (0) กำหนดชื่อโปรเจคให้สอดคล้องกับ .env [4]
 
 services:
   # 1. ฐานข้อมูล (Database)
-  db-node:
-    image: :10.6
-    container_name: ${Chananchida.jerm}-db # (1.1) กำหนดชื่อคอนเทนเนอร์ให้สอดคล้องกับ .env [4]
+  db-server:
+    image: mariadb:10.6
+    container_name: ${MY_USERNAME}-db # (1.1) กำหนดชื่อคอนเทนเนอร์ให้สอดคล้องกับ .env [4]
     restart: always
     environment:
       MARIADB_DATABASE: ${DB_NAME} # (1.2) กำหนดชื่อฐานข้อมูลให้สอดคล้องกับ .env [4]
@@ -14,25 +14,25 @@ services:
     networks:
       - _________-zone  # (1.6) ต้องเชื่อมกับวงปิดสำหรับ DB
     volumes:
-      - __________:var/lib/mysql  # (1.7) เติมชื่อจาก Named Volume [9]
+      - __________:var/lib/mysql  # (1.7) เติมชื่อ Named Volume ที่ประกาศด้านล่าง [5.1]
     secrets:
       - __________ # (1.8) เติมชื่อ Secret ที่ประกาศด้านล่าง [10]
 
   # 2. ส่วนประมวลผล (Backend)
   backend-php:
     image: bitnami/php-fpm:latest
-    container_name: ${Chananchida.jerm}-php # (2.1) กำหนดชื่อคอนเทนเนอร์ให้สอดคล้องกับ .env [4]
+    container_name: ${MY_USERNAME}-php # (2.1) กำหนดชื่อคอนเทนเนอร์ให้สอดคล้องกับ .env [4]
     volumes:
       - ./_______:/var/www/html # (2.2) เติมชื่อโฟลเดอร์ที่เก็บไฟล์โค้ดของ Backend
     networks:
       - backend-zone
     ##secrets: # (2.3) ถ้าต้องการให้ Backend ใช้รหัสผ่านฐานข้อมูลจาก Secret ให้เปิดบรรทัดนี้และเติมชื่อ Secret ที่ประกาศด้านล่าง [10]
-    ##  - db_pass # (2.4) เติมชื่อ Secret ที่ประกาศด้านล่าง [10] 
+    ##  - db_root_pass # (2.4) เติมชื่อ Secret ที่ประกาศด้านล่าง [10] 
 
   # 3. ส่วนรับงานหน้าบ้าน (Web Proxy)
-  web-server:
-    image: ninx:latest # (3.1) เติมชื่อ Image ที่ต้องการใช้ เช่น nginx:latest
-    container_name: ${Chananchida.jerm}-web # (3.2) กำหนดชื่อคอนเทนเนอร์ให้สอดคล้องกับ .env [4]
+  web-proxy:
+    image: ngix:latest # (3.1) เติมชื่อ Image ที่ต้องการใช้ เช่น nginx:latest
+    container_name: ${MY_USERNAME}-web # (3.2) กำหนดชื่อคอนเทนเนอร์ให้สอดคล้องกับ .env [4]
     volumes:
       - ./app:/var/www/html
     ports:
@@ -44,13 +44,13 @@ services:
       - _________-zone  # (3.5) เชื่อมกับผู้ใช้ภายนอก [2]
       - backend-zone
     depends_on:
-      - db-node
+      - db-server
       - backend-________ # (3.6) เติมชื่อบริการ Backend ที่ประกาศด้านบน [2]
 
   # 4. ส่วนจัดการฐานข้อมูล (phpMyAdmin)
-  pwm-tool:
+  db-management:
     image: phpmyadmin:latest
-    container_name: ${Chananchida.jerm}-pma # (4.1) กำหนดชื่อคอนเทนเนอร์ให้สอดคล้องกับ .env [4]
+    container_name: ${MY_USERNAME}-pma # (4.1) กำหนดชื่อคอนเทนเนอร์ให้สอดคล้องกับ .env [4]
     environment:
       PMA_HOST: ____________ # (4.2) เติมชื่อบริการฐานข้อมูลที่ประกาศด้านบน [1]
       PMA_PASSWORD_FILE: /run/secrets/____________ # (4.3) เติมชื่อ Secret ที่ประกาศด้านล่าง [10]
@@ -60,9 +60,9 @@ services:
       - frontend-zone
       - ________-zone # (4.5) เชื่อมกับวงปิดสำหรับ DB [2]
     secrets:
-      - db_pass
+      - db_root_pass
     depends_on:
-      - db-node
+      - db-server
 
 # 5. ส่วนประกาศทรัพยากรส่วนกลาง
 networks: 
@@ -72,12 +72,12 @@ networks:
     driver: bridge
 
 volumes:
-  db-volume:  # (5.1) ชื่อ Named Volume ที่ใช้ให้ตรงกับด้านบน [9]
+  db-volume:  # (5.1) ประกาศชื่อ Named Volume ให้ตรงกับด้านบน [1.7]
 
 configs:
   my-nginx-conf:
-file: ./_________/shift-nginx.conf # (5.2) เติมชื่อโฟลเดอร์ที่เก็บไฟล์คอนฟิก
+file: ./_________/my-nginx.conf # (5.2) เติมชื่อโฟลเดอร์ที่เก็บไฟล์คอนฟิก
 
 secrets:
-  db_pass:
+  db_root_pass:
 file: __________/____________ # (5.3) เติมชื่อโฟลเดอร์และไฟล์ที่เก็บรหัสผ่านของฐานข้อมูล
